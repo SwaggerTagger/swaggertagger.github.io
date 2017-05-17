@@ -1,0 +1,169 @@
+<div id="doc" class="markdown-body container-fluid"><h1 id="yolo-tagger">Yolo Tagger</h1><p>Welcome to the documentation of Yolo Tagger. Check the following sections for an overview of our project repositories, are follow these links to get you started:</p><ul>
+<li><a href="https://github.com/SwaggerTagger" target="_blank">SwaggerTagger</a>, the Github Org where our source code lives</li>
+<li><a href="https://swaggertagger.github.io/impress.js/#/title-slide" target="_blank">An Introductory Presentation of Yolo Tagger</a></li>
+<li><a href="https://pjreddie.com/darknet/yolo/" target="_blank">The official Yolo Website</a> (not affiliated with us in any way)</li>
+</ul><h1 id="frontend">Frontend</h1><p>This repository contains the Frontend for the <em>yolo tagger</em> project, an infrastructure built around the amazing <a href="https://pjreddie.com/darknet/yolo/" target="_blank">darknet yolo project</a>. Check it out at <a href="https://gruppe7.testsites.info" target="_blank">gruppe7.testsites.info</a>.</p><h2 id="technologies">Technologies</h2><p>This Frontend is using the following (notable) technologies:</p><ul>
+<li>The Vue Stack (<a href="https://vuejs.org/" target="_blank">VueJS</a>, <a href="https://router.vuejs.org/en/" target="_blank">vue-router</a>, <a href="https://vuex.vuejs.org/en/intro.html" target="_blank">vuex</a>), an awesome fully featured SPA Framework</li>
+<li><a href="https://vuematerial.github.io/#/" target="_blank">Vue Material</a>, Material Design Components for Vue.</li>
+<li><a href="https://github.com/pagekit/vue-resource" target="_blank">vue-resource</a>, an HTTP client for Vue.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events" target="_blank">Server Sent Events</a>, for pushing classification results to the client in real time. We also support polling <a href="http://gph.is/1sXV7Iq" target="_blank">if your browser doesn’t support</a> SSE’s.</li>
+</ul><h2 id="deployment0">Deployment</h2><h3 id="nginx">Nginx</h3><p>This repository contains a <a href="https://github.com/SwaggerTagger/octo-tagger-frontend/blob/master/Dockerfile" target="_blank"><code>Dockerfile</code></a>, as well as a <a href="https://github.com/SwaggerTagger/octo-tagger-frontend/blob/master/deploy/nginx.conf" target="_blank"><code>NGINX configuration</code></a>, that builds an SSL-Enabled Docker container that serves this project as static HTML and provides a reverse proxy connection to the Backend. You can use <code>push.sh</code> at the root of the repository to push modifications of the frontend to our Container Registry.</p><h3 id="re-deploying-to-kubernetes">(re-)deploying to Kubernetes</h3><p>Together with <a href="https://github.com/SwaggerTagger/tagger-kubernetes" target="_blank">tagger-kubernetes</a>, here’s how you deploy the frontend to your cluster using one shell command:</p><pre><code class="bash hljs"><span class="hljs-built_in">alias</span> deploy-webeng-frontend=<span class="hljs-string">"npm run build &amp;&amp; ./push.sh &amp;&amp; kubectl delete -f ../webeng-tagger/30_frontend-deploy.yml &amp;&amp; kubectl create -f ../webeng-tagger/30_frontend-deploy.yml"</span>
+</code></pre><h2 id="build-setup">Build Setup</h2><pre><code class="bash hljs"><span class="hljs-comment"># install dependencies</span>
+npm install
+
+<span class="hljs-comment"># serve with hot reload at localhost:8080</span>
+npm run dev
+
+<span class="hljs-comment"># build for production with minification</span>
+npm run build
+
+<span class="hljs-comment"># build for production and view the bundle analyzer report</span>
+npm run build --report
+</code></pre><h1 id="backend-application-server-for-yolo-tagger">Backend Application Server for Yolo-Tagger</h1><p>This server provides the Rest-Api for the Yolo-Tagging-Service. It was created using the <a href="https://github.com/dpitkevics/play-silhouette-4.0-slick-postgres-seed" target="_blank">Play 2.5 Silhouette 4.0 Slick PostgreSQL seed</a> that provides Authorization and User Management, but customized to be accessible via a Rest-Api.</p><h2 id="notable-technologieslibraries-used">Notable technologies/libraries used</h2><ul>
+<li><a href="http://slick.lightbend.com/" target="_blank">Slick</a>, a database abstraction layer</li>
+<li><a href="http://akka.io/" target="_blank">Akka</a>, an actor-based messaging system inside our application, that is for example used to connect to kafka</li>
+<li><a href="https://www.playframework.com/" target="_blank">Play</a>, a framework for web applications</li>
+</ul><h2 id="tools">Tools</h2><p>You can use Postman to directly communicate with the Api.<br>
+You can either:</p><ul>
+<li>Go to the <a href="https://documenter.getpostman.com/collection/view/12316-7a9d5d39-d5ff-280e-88d6-f48e3775836f" target="_blank">published documentation</a></li>
+<li>Use the exported version here in the repository (file octo-tagger.postman_collection.json), but you have to create the correct environment yourself%</li>
+</ul><h1 id="tagger-worker">Tagger Worker</h1><p>This python script will connect to Kafka, digest incoming darknet classification tasks from an input topic, classify them using a <a href="https://github.com/SwaggerTagger/darknet" target="_blank">slightly modified version</a> of <a href="https://pjreddie.com/darknet/yolo/" target="_blank">darknet YOLO</a> and put the results into an output topic.</p><h2 id="configuration">Configuration</h2><p>Configuration works via the following Environment Variables:</p><table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>KAFKA_BOOTSTRAP_SERVER</code></td>
+<td><code>broker.kafka.svc.cluster.local</code></td>
+</tr>
+<tr>
+<td><code>DARKNET_CMD_TEMPLATE</code></td>
+<td><code>detector test cfg/yolo.cfg yolo.weights {file} -tagger-output</code></td>
+</tr>
+<tr>
+<td><code>DARKNET_EXECUTABLE</code></td>
+<td><code>/darknet/darknet</code></td>
+</tr>
+<tr>
+<td><code>KAFKA_INCOMING_TOPIC</code></td>
+<td><code>incoming-pics</code></td>
+</tr>
+<tr>
+<td><code>KAFKA_DESTINATION_TOPIC</code></td>
+<td><code>predictions</code></td>
+</tr>
+<tr>
+<td><code>KAFKA_STATUS_TOPIC</code></td>
+<td><code>classification-status</code></td>
+</tr>
+<tr>
+<td><code>KAFKA_CONSUMER_GROUP</code></td>
+<td><code>tagger-workers</code></td>
+</tr>
+<tr>
+<td><code>DARKNET_WORKING_DIR</code></td>
+<td><code>/darknet</code></td>
+</tr>
+</tbody>
+</table><h2 id="interface">Interface</h2><h3 id="incoming-messages">Incoming Messages</h3><p>The Worker expects incoming messages in <code>KAFKA_INCOMING_TOPIC</code> to have a non-null keyId and have the following format:</p><pre><code class="json hljs">{
+  <span class="hljs-attr">"url"</span>: <span class="hljs-string">"https://..../.../.jpg"</span>
+}
+</code></pre><p>Every additional Json Key Value Pair is ignored.</p><h3 id="outgoing-messages">Outgoing Messages</h3><h4 id="predictions-kafka-destination-topic">Predictions (<code>KAFKA_DESTINATION_TOPIC</code>)</h4><p>The Worker will put classification results into <code>KAFKA_DESTINATION_TOPIC</code> with the same keyId as the incoming message and the following json format:</p><pre><code class="json hljs">{
+  <span class="hljs-attr">"count"</span>: <span class="hljs-number">7</span>,
+  <span class="hljs-attr">"input"</span>: <span class="hljs-string">"/tmp/classifyq2yg7ey1.jpg"</span>,
+  <span class="hljs-attr">"matches"</span>: [
+    {
+      <span class="hljs-attr">"left"</span>: <span class="hljs-number">17</span>,
+      <span class="hljs-attr">"right"</span>: <span class="hljs-number">32</span>,
+      <span class="hljs-attr">"top"</span>: <span class="hljs-number">301</span>,
+      <span class="hljs-attr">"class"</span>: <span class="hljs-string">"person"</span>,
+      <span class="hljs-attr">"probability"</span>: <span class="hljs-number">0.346982</span>,
+      <span class="hljs-attr">"bottom"</span>: <span class="hljs-number">333</span>
+    },
+    {
+      <span class="hljs-attr">"left"</span>: <span class="hljs-number">215</span>,
+      <span class="hljs-attr">"right"</span>: <span class="hljs-number">229</span>,
+      <span class="hljs-attr">"top"</span>: <span class="hljs-number">288</span>,
+      <span class="hljs-attr">"class"</span>: <span class="hljs-string">"person"</span>,
+      <span class="hljs-attr">"probability"</span>: <span class="hljs-number">0.288302</span>,
+      <span class="hljs-attr">"bottom"</span>: <span class="hljs-number">334</span>
+    },
+    {
+      <span class="hljs-attr">"left"</span>: <span class="hljs-number">276</span>,
+      <span class="hljs-attr">"right"</span>: <span class="hljs-number">290</span>,
+      <span class="hljs-attr">"top"</span>: <span class="hljs-number">289</span>,
+      <span class="hljs-attr">"class"</span>: <span class="hljs-string">"person"</span>,
+      <span class="hljs-attr">"probability"</span>: <span class="hljs-number">0.342672</span>,
+      <span class="hljs-attr">"bottom"</span>: <span class="hljs-number">341</span>
+    },
+    {
+      <span class="hljs-attr">"left"</span>: <span class="hljs-number">238</span>,
+      <span class="hljs-attr">"right"</span>: <span class="hljs-number">267</span>,
+      <span class="hljs-attr">"top"</span>: <span class="hljs-number">291</span>,
+      <span class="hljs-attr">"class"</span>: <span class="hljs-string">"person"</span>,
+      <span class="hljs-attr">"probability"</span>: <span class="hljs-number">0.292135</span>,
+      <span class="hljs-attr">"bottom"</span>: <span class="hljs-number">353</span>
+    }
+  ],
+  <span class="hljs-attr">"time"</span>: <span class="hljs-number">38.847912</span>
+}
+</code></pre><h4 id="status-kafka-status-topic">Status (<code>KAFKA_STATUS_TOPIC</code>)</h4><p>Status updates are correlated with the image they relate to using the keyId and are in the following format:</p><pre><code class="json hljs">{ <span class="hljs-attr">"status"</span>: <span class="hljs-string">"CLASSIFICATION_STARTING"</span> }
+</code></pre><p>where the value of status may be one of these keywords:</p><table>
+<thead>
+<tr>
+<th>Keyword</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLASSIFICATION_STARTING</code></td>
+<td><code>emitted directly before classification with darknet begins</code></td>
+</tr>
+<tr>
+<td><code>CLASSIFICATION_FAILED_INVALID_INPUT</code></td>
+<td><code>the message coming from kafka is malformed</code></td>
+</tr>
+<tr>
+<td><code>CLASSIFICATION_FAILED_DARKNET_FAILED</code></td>
+<td><code>darknet returned a nonzero exit code. Messages with this status also have "stdout" and "stderr" properties for debugging purposes.</code></td>
+</tr>
+<tr>
+<td><code>CLASSIFICATION_FAILED_UNKNOWN</code></td>
+<td><code>sent when un unknown error occurs. the worker will die immediately after this status update is placed, because this error message indicated something is going seriously wrong</code></td>
+</tr>
+</tbody>
+</table><h2 id="build-container">Build Container</h2><pre><code class="bash hljs">$ git <span class="hljs-built_in">clone</span> https://github.com/SwaggerTagger/DarknetKafkaWorker
+$ <span class="hljs-built_in">cd</span> DarknetKafkaWorker
+$ git <span class="hljs-built_in">clone</span> https://github.com/SwaggerTagger/darknet
+$ wget http://pjreddie.com/media/files/yolo.weights -O darknet/yolo.weights
+$ docker build -t tagger-worker:latest .
+</code></pre><h1 id="our-modifications-to-darknet">Our Modifications to Darknet</h1><p>We had to fork darknet to work with our project. These modifications where made made to the darknet source code:</p><h2 id="machine-readable-output">Machine Readable Output</h2><p>Have darknet output machine readable (json) predictions instead of writing the results directly to the bounding boxes of an image.<br>
+For this purpose <code>darknet detector</code> now recognizes the <code>-tagger-output</code> switch, which will disable all writes to stdout except when the predictions are written.</p><pre><code class="bash hljs">./darknet detector <span class="hljs-built_in">test</span> cfg/coco.data cfg/yolo.cfg yolo.weights data/dog.jpg -tagger-output 2&gt;/dev/null
+{<span class="hljs-string">"input"</span>: <span class="hljs-string">"data/dog.jpg"</span>, <span class="hljs-string">"time"</span>: 13.036422, <span class="hljs-string">"matches"</span>: [
+{<span class="hljs-string">"class"</span>: <span class="hljs-string">"dog"</span>, <span class="hljs-string">"probability"</span>: 0.823520, <span class="hljs-string">"left"</span>: 132, <span class="hljs-string">"right"</span>: 321, <span class="hljs-string">"top"</span>: 231, <span class="hljs-string">"bottom"</span>: 521 }
+, {<span class="hljs-string">"class"</span>: <span class="hljs-string">"truck"</span>, <span class="hljs-string">"probability"</span>: 0.643006, <span class="hljs-string">"left"</span>: 467, <span class="hljs-string">"right"</span>: 680, <span class="hljs-string">"top"</span>: 84, <span class="hljs-string">"bottom"</span>: 168 }
+, {<span class="hljs-string">"class"</span>: <span class="hljs-string">"bicycle"</span>, <span class="hljs-string">"probability"</span>: 0.852180, <span class="hljs-string">"left"</span>: 95, <span class="hljs-string">"right"</span>: 588, <span class="hljs-string">"top"</span>: 123, <span class="hljs-string">"bottom"</span>: 448 }
+], <span class="hljs-string">"count"</span>: 3 }
+</code></pre><h1 id="kubernetes">Kubernetes</h1><p><code>Kubernetes .yml files for the tagger cluster</code></p><h2 id="overview">Overview</h2><p>This repository contains all files required to boot the tagger cluster (except for Kafka, which can be deployed using <a href="https://github.com/Yolean/kubernetes-kafka" target="_blank">these .yml files</a>).</p><p>Here is a description of the Kubernetes Object that are defined in this repository (in the order they get created):</p><ul>
+<li>a <code>tagger</code> namespace, where everything will live</li>
+<li><code>tagger-secrets</code>, a secrets object used by the backend containing authentification to azure blob storage and a secret used for JWT signing</li>
+<li><code>testsites-info-secrets</code>, which contains the <code>fullchain.pem</code> and <code>privkey.pem</code> for <a href="https://gruppe7.testsites.info" target="_blank">gruppe7.testsites.info</a>.</li>
+<li><code>postgres-deploy</code>, which deploys postgresql into the cluster</li>
+<li><code>postgres-service</code>, which makes the postgres deployment addressable by the cluster</li>
+<li><code>tagger-backend-deploy</code>, which deploys the <a href="https://github.com/SwaggerTagger/octo-tagger-backend" target="_blank">tagger backend</a> into the cluster.</li>
+<li><code>tagger-backend-service</code>, which makes the service addressable by the cluster</li>
+<li><code>tagger-worker-deploy</code>, which deploys the worker into the cluster</li>
+<li><code>frontend-deploy</code>, which deploys the <a href="https://github.com/SwaggerTagger/octo-tagger-frontend" target="_blank">tagger-frontend</a> into the cluster</li>
+<li><code>frontend-expose</code>, which installs a load balancer in front of the frontend deployment and serves as an entry point to the outside world.</li>
+</ul><p>Additionally, the following helper objects are defined:</p><ul>
+<li><code>get-certs</code>, a deployment of a letsencrypt docker image that can be used to generate certificates.</li>
+<li><code>kafka-manager-deploy</code>, which is used to deploy an instance of kafka-manager into the cluster.</li>
+</ul><h2 id="deployment">Deployment</h2><p>In order to deploy the tagger into your own kubernetes cluster, do the following:</p><ul>
+<li>Deploy <a href="https://github.com/Yolean/kubernetes-kafka" target="_blank">Kafka</a> into your cluster</li>
+<li><code>git clone https://github.com/SwaggerTagger/tagger-kubernetes &amp;&amp; cd tagger-kubernetes</code></li>
+<li><code>kubectl create -f .</code></li>
+</ul></div>
